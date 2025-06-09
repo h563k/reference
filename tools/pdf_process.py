@@ -40,12 +40,25 @@ class PDFProcessor:
         """清理文本中的多余空格/换行"""
         return re.sub(r'\s+', ' ', text).strip()
 
-    def split_by_titles(self, text, page_num, language):
-        """按层级标题切割内容"""
-        # 改进后的正则表达式，能识别更多类型的标题格式
-        chinese_pattern = r'([零一二三四五六七八九十百]+、)|\s*(\d+(\.\d+)+\s+[^\n]+)'
-        english_pattern = r'(\b\d+(\.\d+)+\s+[^\n]+)|(^[A-Z][^\n]+$)'
+    def split_long_content(self, text, max_length=1000):
+        segments = []
+        while len(text) > max_length:
+            # 寻找最近的空格进行分割（避免切断单词）
+            split_pos = text.rfind(' ', 0, max_length)
+            split_pos = split_pos if split_pos != -1 else max_length
+            segments.append(text[:split_pos].strip())
+            text = text[split_pos:].lstrip()
+        if text.strip():
+            segments.append(text.strip())
+        return segments
 
+    def split_by_titles(self, text, page_num, language):
+        """按层级标题切割内容，并处理过长段落"""
+        # 辅助函数：拆分过长段落
+
+        # 原有正则表达式保持不变
+        chinese_pattern = r'([一二三四五六七八九十百]+、)|\s*(\d+(\.\d+)+\s+[^\n]+)'
+        english_pattern = r'(\b\d+(\.\d+)+\s+[^\n]+)|(^[A-Z][^\n]+$)'
         pattern = chinese_pattern if language == "chinese" else english_pattern
         compiled_pattern = re.compile(pattern, re.MULTILINE)
 
@@ -59,13 +72,25 @@ class PDFProcessor:
         for match in matches:
             start_pos = match.start()
             if start_pos > last_end:
-                sections.append({
-                    "type": "content",
-                    "text": text[last_end:start_pos],
-                    "page_num": page_num
-                })
+                # 处理内容分段
+                content_text = text[last_end:start_pos]
+                cleaned_content = self.clean_text(content_text)
+                # 添加分段逻辑
+                if len(cleaned_content) > 1000:
+                    for seg in self.split_long_content(cleaned_content):
+                        sections.append({
+                            "type": "content",
+                            "text": seg,
+                            "page_num": page_num
+                        })
+                else:
+                    sections.append({
+                        "type": "content",
+                        "text": cleaned_content,
+                        "page_num": page_num
+                    })
 
-            # 提取实际的匹配文本（可能在不同的分组中）
+            # 处理标题部分保持不变
             title_text = next((group for group in match.groups() if group), "")
             sections.append({
                 "type": "title",
@@ -74,35 +99,39 @@ class PDFProcessor:
             })
             last_end = match.end()
 
-        # 添加剩余内容
+        # 处理剩余内容
         if last_end < len(text):
-            sections.append({
-                "type": "content",
-                "text": text[last_end:],
-                "page_num": page_num
-            })
+            remaining_text = self.clean_text(text[last_end:])
+            if len(remaining_text) > 1000:
+                for seg in self.split_long_content(remaining_text):
+                    sections.append({
+                        "type": "content",
+                        "text": seg,
+                        "page_num": page_num
+                    })
+            else:
+                sections.append({
+                    "type": "content",
+                    "text": remaining_text,
+                    "page_num": page_num
+                })
 
         return sections
 
     def extract_special_sections(self, segments):
         """识别并标记特殊章节（摘要/介绍等）"""
         sections = []
-        current_section = {"type": "other",
-                           "title": "", "content": [], "start_page": 1}
-
+        current_section = {"type": "other", "title": "", "content": [], "start_page": 1}
         for seg in segments:
             if seg['type'] == 'title':
                 lower_text = seg['text'].lower()
-                language = "chinese" if re.search(
-                    r'[\u4e00-\u9fa5]', lower_text) else "english"
+                language = "chinese" if re.search(r'[\u4e00-\u9fa5]', lower_text) else "english"
 
                 found_special = False
                 for section_type, keywords in self.section_keywords[language].items():
                     if any(kw in lower_text for kw in keywords):
-                        # 保存当前章节并开始新章节
                         if current_section["content"]:
                             sections.append(current_section)
-
                         current_section = {
                             "type": section_type,
                             "title": seg['text'],
@@ -111,18 +140,23 @@ class PDFProcessor:
                         }
                         found_special = True
                         break
-
-                # 如果是特殊章节，标题不加入内容
                 if found_special:
                     continue
 
-            # 将内容添加到当前章节
+            # 处理超长内容分割
             if seg['text'].strip():
-                # 对于内容类型，如果当前章节还没有设置起始页，则设置为当前页
+                cleaned_text = self.clean_text(seg['text'])
+                # 对超长内容进行分割（复用split_long_content方法）
+                if len(cleaned_text) > 1000:
+                    split_segments = self.split_long_content(cleaned_text)
+                    for split_seg in split_segments:
+                        current_section["content"].append(split_seg)
+                else:
+                    current_section["content"].append(cleaned_text)
+
+                # 设置起始页码逻辑保持不变
                 if seg['type'] == 'content' and 'start_page' not in current_section:
                     current_section['start_page'] = seg['page_num']
-
-                current_section["content"].append(seg['text'])
 
         # 添加最后一个章节
         if current_section["content"]:
@@ -166,12 +200,22 @@ class PDFProcessor:
                     "page_num": page['page_num']
                 } for p in paragraphs if p.strip())
 
-        print(f"文件 {file_name} 分段数: {all_segments}")
+        print(f"文件 {file_name} 分段数: {len(all_segments)}")
+        # 重构文档构建逻辑
+        documents = []
+        for seg in all_segments:  # 处理原始段落
+            documents.append({
+                "file_path": file_path,
+                "file_name": file_name,
+                "language": language,
+                "section_type": seg.get('type', 'paragraph'),
+                "segment_text": self.clean_text(seg['text']),
+                "page_num": seg['page_num']
+            })
         # 提取特殊章节
         special_sections = self.extract_special_sections(all_segments)
         print(f"文件 {file_name} 特殊章节数: {len(special_sections)}")
         # 构建ES文档
-        documents = all_segments
         for i, section in enumerate(special_sections):
             # 确保至少有起始页
             start_page = section.get(

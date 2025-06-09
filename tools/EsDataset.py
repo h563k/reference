@@ -3,7 +3,7 @@ import logging
 from llama_index.core import QueryBundle
 from llama_index.core.schema import NodeWithScore, TextNode
 from llama_index.core.retrievers import BaseRetriever
-from typing import List, Dict, Any
+from typing import List
 from elasticsearch import Elasticsearch
 from dotenv import load_dotenv
 
@@ -60,67 +60,61 @@ class ESDataset:
         print(f"Created index: {self.index_name}")
 
 
-class ElasticsearchKeywordRetriever(BaseRetriever):
-    def __init__(self, index_name: str, content_field: str):
-        self.es = ESDataset(index_name).client
-        self.index_name = index_name
-        self.content_field = content_field
+# 在ESDataset类下方添加以下实现
+class ESRetriever(BaseRetriever):
+    def __init__(self, es_dataset: ESDataset):
+        super().__init__()
+        self.es = es_dataset.client
+        self.index_name = es_dataset.index_name
 
-    def _retrieve(self, query_bundle: QueryBundle, **kwargs) -> List[NodeWithScore]:
-        # 获取查询字符串
-        query_str = query_bundle.query_str.strip()
-        if not query_str:
-            return []
-
-        # 构建关键词搜索查询
-        es_query = {
-            "query": {
-                "match": {
-                    self.content_field: {
-                        "query": query_str,
-                        "operator": "and"  # 要求所有关键词都匹配
-                    }
+    # 修改参数
+    def _retrieve(self, query_str: str, file_name: str) -> List[NodeWithScore]:
+        query = {
+            "bool": {
+                "must": {
+                    "match": {"segment_text": query_str}  # 直接使用查询字符串
+                },
+                "filter": {
+                    "term": {"file_name": file_name}  # 直接使用文件名参数
                 }
-            },
-            "size": 10  # 限制返回结果数量
+            }
         }
 
-        try:
-            # 执行Elasticsearch查询
-            response = self.es.search(
-                index=self.index_name,
-                body=es_query
-            )
-        except Exception as e:
-            print(f"Elasticsearch查询失败: {e}")
-            return []
+        res = self.es.search(
+            index=self.index_name,
+            body={"query": query},
+            size=10
+        )
 
-        # 处理搜索结果
-        results = []
-        for hit in response['hits']['hits']:
-            doc = hit['_source']
-            # 创建文本节点
-            text_node = TextNode(
-                text=doc.get(self.content_field, ""),
-                id_=hit['_id'],
+        nodes = []
+        for hit in res["hits"]["hits"]:
+            source = hit["_source"]
+            node = TextNode(
+                text=source["segment_text"],
                 metadata={
-                    "document_id": hit['_id'],
-                    "score": hit['_score']
+                    "file_name": source["file_name"],
+                    # "page_num": source["page_num"],
+                    # "section_title": source["section_title"]
                 }
             )
-            # 包装为带分数的节点
-            results.append(NodeWithScore(
-                node=text_node,
-                score=hit['_score']
-            ))
+            nodes.append(NodeWithScore(node=node, score=hit["_score"]))
+        return nodes
 
-        return results
+    def retrieve(self, query_str: str, file_name: str) -> List[NodeWithScore]:
+        # 直接传递参数到内部方法
+        return self._retrieve(query_str, file_name)
 
 
-if __name__ == "__main__":
-    retriever = ElasticsearchKeywordRetriever(
-        index_name="pdf_segments", content_field="content")
-    query_bundle = QueryBundle(query_str="如何使用llama_index")
-    results = retriever.retrieve(query_bundle)
-    for result in results:
-        print(result.node.text)
+def query_es(query_str: str, file_name: str) -> List[NodeWithScore]:
+    # 初始化数据集
+    es_dataset = ESDataset()
+
+    # 创建检索器
+    retriever = ESRetriever(es_dataset)
+
+    # 执行带过滤的检索
+    results = retriever.retrieve(
+        query_str,
+        file_name
+    )
+    return results
