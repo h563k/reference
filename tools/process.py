@@ -1,5 +1,9 @@
-from tools.pdf_process import PDFProcessor
+from tools.EsPdfProcess import PDFProcessor
+from tools.QdDatabast import QdrantDatabase
+
 
 def main():
-    processor = PDFProcessor()
-    processor.process_all()
+    es = PDFProcessor()
+    es.process_all()
+    qd = QdrantDatabase()
+    qd.process_all()

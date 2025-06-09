@@ -4,3 +4,4 @@ certs/*
 .env
 test.*
 __pycache__/
+models/*

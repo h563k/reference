@@ -21,9 +21,9 @@ class ESDataset:
 
     def es_login(self):
         # 打印环境变量值
-        db_url = os.getenv("DATABASE_URL")
-        user = os.getenv("USER")
-        password = os.getenv("PASSWORD")
+        db_url = str(os.getenv("DATABASE_URL"))
+        user = str(os.getenv("USER"))
+        password = str(os.getenv("PASSWORD"))
         print(f"Connecting to Elasticsearch at: {db_url} with user: {user}")
         es = Elasticsearch(
             hosts=[db_url],

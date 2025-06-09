@@ -2,8 +2,8 @@ import os
 import re
 import fitz  # PyMuPDF
 import json
-from multiprocessing import Pool
 from tools.EsDataset import ESDataset
+from tools.config import get_path_list
 from tqdm import tqdm
 
 
@@ -267,23 +267,16 @@ class PDFProcessor:
 
         print(f"处理完成! 共处理 {len(pdf_files)} 个文件, 写入 {count} 个段落")
 
-    def get_path_list(self):
-        path_list = []
-        for x in os.listdir("origin_data"):
-            file_path = os.path.join("origin_data", x, "参考文献")
-            path_list.append(file_path)
-        return path_list
-
     def process_all(self):
         with open("file_list.json", 'r', encoding='utf-8') as f:
             file_list = json.load(f)
-        path_list = self.get_path_list()
+        path_list = get_path_list()
         for path in path_list:
-            if path in file_list:
+            if path in file_list['es']:
                 continue
             print(file_list)
             self.process_directory(path)
-            file_list.append(path)
+            file_list['es'].append(path)
             with open("file_list.json", 'w', encoding='utf-8') as f:
                 json.dump(file_list, f)
 

@@ -1,5 +1,14 @@
+llama-index 
+qdrant-client 
+transformers 
+sentence-transformers
+llama-index-vector-stores-qdrant 
+llama-index-readers-file 
+llama-index-embeddings-fastembed 
+llama-index-llms-openai
 llama-index-vector-stores-elasticsearch 
 llama-index-embeddings-huggingface 
+sentence-transformers
 llama-index
 pymupdf 
 pdfplumber
