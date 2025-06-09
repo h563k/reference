@@ -1,8 +1,9 @@
 import os
 import re
 import fitz  # PyMuPDF
+import json
+from multiprocessing import Pool
 from tools.EsDataset import ESDataset
-from collections import defaultdict
 from tqdm import tqdm
 
 
@@ -121,11 +122,13 @@ class PDFProcessor:
     def extract_special_sections(self, segments):
         """识别并标记特殊章节（摘要/介绍等）"""
         sections = []
-        current_section = {"type": "other", "title": "", "content": [], "start_page": 1}
+        current_section = {"type": "other",
+                           "title": "", "content": [], "start_page": 1}
         for seg in segments:
             if seg['type'] == 'title':
                 lower_text = seg['text'].lower()
-                language = "chinese" if re.search(r'[\u4e00-\u9fa5]', lower_text) else "english"
+                language = "chinese" if re.search(
+                    r'[\u4e00-\u9fa5]', lower_text) else "english"
 
                 found_special = False
                 for section_type, keywords in self.section_keywords[language].items():
@@ -263,6 +266,26 @@ class PDFProcessor:
                 print(f"处理文件 {filename} 时出错: {str(e)}")
 
         print(f"处理完成! 共处理 {len(pdf_files)} 个文件, 写入 {count} 个段落")
+
+    def get_path_list(self):
+        path_list = []
+        for x in os.listdir("origin_data"):
+            file_path = os.path.join("origin_data", x, "参考文献")
+            path_list.append(file_path)
+        return path_list
+
+    def process_all(self):
+        with open("file_list.json", 'r', encoding='utf-8') as f:
+            file_list = json.load(f)
+        path_list = self.get_path_list()
+        for path in path_list:
+            if path in file_list:
+                continue
+            print(file_list)
+            self.process_directory(path)
+            file_list.append(path)
+            with open("file_list.json", 'w', encoding='utf-8') as f:
+                json.dump(file_list, f)
 
 
 # 使用示例

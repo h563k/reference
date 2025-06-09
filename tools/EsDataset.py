@@ -1,6 +1,5 @@
 import os
 import logging
-from llama_index.core import QueryBundle
 from llama_index.core.schema import NodeWithScore, TextNode
 from llama_index.core.retrievers import BaseRetriever
 from typing import List
@@ -93,8 +92,6 @@ class ESRetriever(BaseRetriever):
                 text=source["segment_text"],
                 metadata={
                     "file_name": source["file_name"],
-                    # "page_num": source["page_num"],
-                    # "section_title": source["section_title"]
                 }
             )
             nodes.append(NodeWithScore(node=node, score=hit["_score"]))
@@ -108,10 +105,8 @@ class ESRetriever(BaseRetriever):
 def query_es(query_str: str, file_name: str) -> List[NodeWithScore]:
     # 初始化数据集
     es_dataset = ESDataset()
-
     # 创建检索器
     retriever = ESRetriever(es_dataset)
-
     # 执行带过滤的检索
     results = retriever.retrieve(
         query_str,
