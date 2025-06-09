@@ -1,4 +1,4 @@
-from tools.pdf_process import PDFProcessor
-processor = PDFProcessor()
-processor.process_all()
+from tools.process import main
 
+if __name__ == '__main__':
+    main()
