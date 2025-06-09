@@ -8,8 +8,6 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
 from typing import List, Optional
 from tools.config import get_path_list
-from llama_index.readers.file import PDFReader
-from pdfminer.high_level import extract_text
 import json
 import os
 import re
@@ -63,11 +61,6 @@ class QdrantDatabase:
             lang = "zh"
         return {"source_file": filename, "language": lang}
 
-    def load_pdf_with_cn_support(self, file_path):
-        """支持中文的PDF解析方法"""
-        text = extract_text(file_path, codec='utf-8')
-        return [Document(text=text)]
-
     def load_and_chunk_pdfs(self, folder_path) -> List[BaseNode]:
         """加载PDF并分块处理"""
         reader = PyMuPDFReader()
@@ -88,10 +81,7 @@ class QdrantDatabase:
             for doc in documents:
                 doc.metadata.update(metadata)
                 # 创建文本节点（LlamaIndex会自动分块）
-                node = TextNode(
-                    text=doc.text,
-                    metadata=doc.metadata
-                )
+                node = TextNode(text=doc.text, metadata=doc.metadata)
                 nodes.append(node)
         return nodes
 
