@@ -1,2 +1,6 @@
 origin_data/*
-test
+test/*
+certs/*
+.env
+test.*
+__pycache__/

@@ -1,0 +1,5 @@
+llama-index-vector-stores-elasticsearch 
+llama-index-embeddings-huggingface 
+llama-index
+pymupdf 
+pdfplumber
