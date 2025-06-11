@@ -91,8 +91,10 @@ class QdrantDatabase:
                 lang = "reference"
             else:
                 continue
+            print(f'找到参考文献在第{i}个节点，开始处理...')
             nodes = nodes[:i+1]
-            nodes[i] = TextNode(text.split(lang)[0], metadata=doc.metadata)
+            nodes[i] = TextNode(text=text.split(lang)[0], metadata=doc.metadata)
+            break
 
         return nodes
 
