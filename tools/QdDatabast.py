@@ -83,6 +83,17 @@ class QdrantDatabase:
                 # 创建文本节点（LlamaIndex会自动分块）
                 node = TextNode(text=doc.text, metadata=doc.metadata)
                 nodes.append(node)
+        for i in range(len(nodes)-1, 0, -1):
+            text = nodes[i].text.lower()
+            if '参考文献' in text:
+                lang = "参考文献"
+            elif 'reference' in text:
+                lang = "reference"
+            else:
+                continue
+            nodes = nodes[:i+1]
+            nodes[i] = TextNode(text.split(lang)[0], metadata=doc.metadata)
+
         return nodes
 
     def ingest_documents(self, file_path):

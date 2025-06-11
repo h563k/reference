@@ -35,6 +35,14 @@ class PDFProcessor:
                 "page_num": page_num + 1,
                 "text": page.get_text("text")  # 提取纯文本
             })
+        language = self.detect_language(pages[0]['text'])
+        for i in range(len(pages)-1, 0, -1):
+            reference = "参考文献" if language == "chinese" else "reference"
+            if reference in pages[i]['text'].lower():
+                print(f'找到参考文献,位于第{i}片段')
+                pages = pages[:i+1]
+                pages[i]['text'] = pages[i]['text'].split(reference)[0]
+                break
         return pages
 
     def clean_text(self, text):
