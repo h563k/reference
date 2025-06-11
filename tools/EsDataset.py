@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 # 加载环境变量
 load_dotenv()
 # 设置Elasticsearch日志级别为DEBUG（可选）
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 
 class ESDataset:
@@ -102,9 +102,7 @@ class ESRetriever(BaseRetriever):
         return self._retrieve(query_str, file_name)
 
 
-def query_es(query_str: str, file_name: str) -> List[NodeWithScore]:
-    # 初始化数据集
-    es_dataset = ESDataset()
+def query_es(query_str: str, file_name: str, es_dataset: ESDataset) -> List[NodeWithScore]:
     # 创建检索器
     retriever = ESRetriever(es_dataset)
     # 执行带过滤的检索

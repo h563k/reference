@@ -110,7 +110,7 @@ class QdrantDatabase:
         index = VectorStoreIndex.from_vector_store(
             vector_store=self.vector_store
         )
-        return index.as_retriever(filters=filters)
+        return index.as_retriever(similarity_top_k=3, filters=filters)
 
     def process_all(self):
         """处理所有文件"""

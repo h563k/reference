@@ -12,3 +12,4 @@ sentence-transformers
 llama-index
 pymupdf 
 pdfplumber
+python-docx
