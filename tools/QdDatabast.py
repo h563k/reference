@@ -123,11 +123,11 @@ class QdrantDatabase:
         index = VectorStoreIndex.from_vector_store(
             vector_store=self.vector_store
         )
-        return index.as_retriever(similarity_top_k=3, filters=filters)
+        return index.as_retriever(similarity_top_k=5, filters=filters)
 
     def process_all(self):
         """处理所有文件"""
-        with open("file_list.json", 'r', encoding='utf-8') as f:
+        with open("data/file_list.json", 'r', encoding='utf-8') as f:
             file_list = json.load(f)
         path_list = get_path_list()
         for path in path_list:
@@ -135,7 +135,7 @@ class QdrantDatabase:
                 continue
             self.ingest_documents(path)
             file_list['qd'].append(path)
-            with open("file_list.json", 'w', encoding='utf-8') as f:
+            with open("data/file_list.json", 'w', encoding='utf-8') as f:
                 json.dump(file_list, f)
 
 

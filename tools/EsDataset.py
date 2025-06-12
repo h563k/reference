@@ -82,7 +82,7 @@ class ESRetriever(BaseRetriever):
         res = self.es.search(
             index=self.index_name,
             body={"query": query},
-            size=10
+            size=3
         )
 
         nodes = []

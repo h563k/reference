@@ -276,7 +276,7 @@ class PDFProcessor:
         print(f"处理完成! 共处理 {len(pdf_files)} 个文件, 写入 {count} 个段落")
 
     def process_all(self):
-        with open("file_list.json", 'r', encoding='utf-8') as f:
+        with open("data/file_list.json", 'r', encoding='utf-8') as f:
             file_list = json.load(f)
         path_list = get_path_list()
         for path in path_list:
@@ -285,7 +285,7 @@ class PDFProcessor:
             print(file_list)
             self.process_directory(path)
             file_list['es'].append(path)
-            with open("file_list.json", 'w', encoding='utf-8') as f:
+            with open("data/file_list.json", 'w', encoding='utf-8') as f:
                 json.dump(file_list, f)
 
 
