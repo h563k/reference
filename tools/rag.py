@@ -44,6 +44,7 @@ Data_Query: "{data_query}"
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
         ],
+        temperature=0,
     )
     return response.choices[0].message.content
 
@@ -81,20 +82,24 @@ def reranker(query_str: str, query_list: str):
 
 
 def rag_main():
-    result = []
+    result_file = 'data/final_result.jsonl'  # 使用.jsonl扩展名表示JSON Lines格式
+    # 先清空文件（可选，根据是否需要保留历史数据决定）
+    open(result_file, 'w').close()
+
     with open('data/data_query.json', 'r') as f:
         data = json.load(f)
+
     for reference in data:
-        # 纯提取
         for ref in reference.values():
-            reference = ref
+            reference = ref  # 重命名避免变量覆盖
+
         # 文献原话， 详细引用
         for query_sentence, sentencr_detail in reference.items():
             for reference_name, query_list in sentencr_detail.items():
                 sorted_documents = reranker(query_sentence, query_list)
                 max_length = 3000
                 lens = 0
-                document=""
+                document = ""
                 for doc in sorted_documents:
                     lens += len(doc)
                     if lens < max_length:
@@ -109,9 +114,15 @@ def rag_main():
                     "verdict": verdict[0] if verdict else None,
                     "evidence": evidence[0] if evidence else None
                 }
-                result.append([reference, query_sentence, reference_name, response])
-    with open('data/final_result.json', 'a', encoding='utf-8') as f:
-        f.write(json.dumps(result, ensure_ascii=False) + '\n')
+                current_result = {
+                    "query_sentence": query_sentence,
+                    "reference_name": reference_name,
+                    "response": response  # 包含verdict和evidence
+                }    
+                # 实时写入单条结果到文件（JSON Lines格式）
+                with open(result_file, 'a', encoding='utf-8') as f:
+                    f.write(json.dumps(current_result,
+                            ensure_ascii=False) + '\n')
 
 
 if __name__ == '__main__':
