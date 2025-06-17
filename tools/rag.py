@@ -3,11 +3,20 @@ import re
 import openai
 import json
 import torch
+import pandas as pd
 from dotenv import load_dotenv
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_random_exponential,
+)  # for exponential backoff
+from functools import lru_cache
 load_dotenv()
 
 
+@lru_cache()
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def key_word_query(query: str, data_query: str, reference_name: str) -> str:
     system_prompt = f"""你是一个学术诚信审核专家，需要严格判断参考文献的引用质量。请按照以下规则分类：
 【0 虚假引用】文献原话的关键信息在片段中完全不存在，或与片段内容相矛盾
@@ -59,6 +68,8 @@ def reranker(query_str: str, query_list: str):
     model = AutoModelForSequenceClassification.from_pretrained(model_name)
     model = model.to(device)
     model.eval()  # 设置为评估模式
+    if not query_list:
+        return ["未查询到有效数据"]
     # 我们将对每个文档进行评分
     pairs = [[query_str, doc] for doc in query_list]
     with torch.no_grad():
@@ -81,18 +92,23 @@ def reranker(query_str: str, query_list: str):
     return sorted_documents
 
 
-def rag_main():
+def rag_process():
     result_file = 'data/final_result.jsonl'  # 使用.jsonl扩展名表示JSON Lines格式
-    # 先清空文件（可选，根据是否需要保留历史数据决定）
-    open(result_file, 'w').close()
+    with open(result_file, 'r') as f:
+        name_set = set()
+        for line in f:
+            data = json.loads(line.strip())
+            name_set.add(data['article_name'])
+    name_set = list(name_set)
 
     with open('data/data_query.json', 'r') as f:
         data = json.load(f)
 
     for reference in data:
-        for ref in reference.values():
+        for name, ref in reference.items():
             reference = ref  # 重命名避免变量覆盖
-
+        if name in name_set:
+            continue
         # 文献原话， 详细引用
         for query_sentence, sentencr_detail in reference.items():
             for reference_name, query_list in sentencr_detail.items():
@@ -111,18 +127,30 @@ def rag_main():
                 verdict = re.findall(r'"verdict": (\d+)', response)
                 evidence = re.findall(r'"evidence": "(.+?)"', response)
                 response = {
-                    "verdict": verdict[0] if verdict else None,
-                    "evidence": evidence[0] if evidence else None
+                    "verdict": verdict[0],
+                    "evidence": evidence[0]
                 }
                 current_result = {
+                    "article_name": name,
                     "query_sentence": query_sentence,
                     "reference_name": reference_name,
                     "response": response  # 包含verdict和evidence
-                }    
+                }
                 # 实时写入单条结果到文件（JSON Lines格式）
                 with open(result_file, 'a', encoding='utf-8') as f:
                     f.write(json.dumps(current_result,
                             ensure_ascii=False) + '\n')
+
+
+def rag_main():
+    rag_process()
+    result_file = 'data/final_result.jsonl'  # 使用.jsonl扩展名表示JSON Lines格式
+    with open(result_file, 'r') as f:
+        name_set = set()
+        for line in f:
+            data = json.loads(line.strip())
+            print(data)
+    
 
 
 if __name__ == '__main__':

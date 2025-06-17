@@ -13,3 +13,5 @@ llama-index
 pymupdf 
 pdfplumber
 python-docx
+tenacity
+pandas
