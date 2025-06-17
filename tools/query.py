@@ -82,11 +82,11 @@ def query_es_by_keywords():
 
 
 def query_main():
-    with open("data_es_query.json", "r", encoding="utf-8") as f:
+    with open("data_query.json", "r", encoding="utf-8") as f:
         data = json.load(f)
     if not data:
         results = query_es_by_keywords()
-        with open("data_es_query.json", "w", encoding="utf-8") as f:
+        with open("data_query.json", "w", encoding="utf-8") as f:
             json.dump(results, f)
 
     print(results)

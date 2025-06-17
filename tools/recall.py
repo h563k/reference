@@ -45,7 +45,7 @@ def detect_language(text):
 
 
 def recall(es_dataset, db):
-    with open("data/data_es_query.json", "r", encoding="utf-8") as f:
+    with open("data/data_query.json", "r", encoding="utf-8") as f:
         results = json.load(f)
     start = len(results)
     # 文章合集
@@ -78,6 +78,6 @@ def recall(es_dataset, db):
                 article_temp[text] = reference_query
             article_name_set[article_name] = article_temp
         results.append(article_name_set)
-        with open("data/data_es_query.json", "w", encoding="utf-8") as f:
+        with open("data/data_query.json", "w", encoding="utf-8") as f:
             json.dump(results, f, ensure_ascii=False, indent=4)
     return results
