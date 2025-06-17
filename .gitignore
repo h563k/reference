@@ -5,3 +5,4 @@ certs/*
 test.*
 __pycache__/
 models/*
+*.json

@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 # 加载环境变量
 load_dotenv()
 # 设置Elasticsearch日志级别为DEBUG（可选）
-# logging.basicConfig(level=logging.DEBUG)
+if os.getenv("DEBUG") == "True":
+    logging.getLogger("elasticsearch").setLevel(logging.DEBUG)
 
 
 class ESDataset:
@@ -82,7 +83,7 @@ class ESRetriever(BaseRetriever):
         res = self.es.search(
             index=self.index_name,
             body={"query": query},
-            size=3
+            size=10
         )
 
         nodes = []
