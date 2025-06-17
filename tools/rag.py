@@ -96,7 +96,7 @@ def rag_process():
     result_file = 'data/final_result.jsonl'  # 使用.jsonl扩展名表示JSON Lines格式
     with open(result_file, 'r') as f:
         name_set = set()
-        for line in f:
+        for _, line in enumerate(f):
             data = json.loads(line.strip())
             name_set.add(data['article_name'])
     name_set = list(name_set)
@@ -145,12 +145,14 @@ def rag_process():
 def rag_main():
     rag_process()
     result_file = 'data/final_result.jsonl'  # 使用.jsonl扩展名表示JSON Lines格式
+    data = []
     with open(result_file, 'r') as f:
-        name_set = set()
         for line in f:
-            data = json.loads(line.strip())
-            print(data)
-    
+            temp = json.loads(line.strip())
+            data.append(temp)
+    df = pd.json_normalize(data)
+    df.columns = ['论文名称', '待判断句子', '引用参考文献', '判断级别', '判断理由']
+    df.to_excel('data/final_result.xlsx')
 
 
 if __name__ == '__main__':
